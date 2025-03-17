@@ -18,9 +18,9 @@
           go = prev."go_1_${toString goVersion}";
           # Overlaying nodejs here to ensure nodePackages use the desired
           # version of nodejs. Offchainlabs suggests nodejs v18 in the docs.
-          nodejs = prev.nodejs_18;
-          yarn = (prev.yarn.override { inherit nodejs; });
-          pnpm = (prev.pnpm.override { inherit nodejs; });
+          # nodejs = prev.nodejs_18;
+          # yarn = (prev.yarn.override { inherit nodejs; });
+          # pnpm = (prev.pnpm.override { inherit nodejs; });
         })
         foundry.overlay
       ];
@@ -106,9 +106,9 @@
                 wabt  # wasm2wat, wat2wasm, etc
 
                 # Docker
-                docker-compose # provides the `docker-compose` command
-                docker-buildx
-                docker-credential-helpers # for `docker-credential-osxkeychain` command
+                # docker-compose # provides the `docker-compose` command
+                # docker-buildx
+                # docker-credential-helpers # for `docker-credential-osxkeychain` command
               ];
 
               # Ensure the unwrapped clang is used by default.
@@ -148,9 +148,9 @@
                 golangci-lint
                 gotestsum
 
-                # Node
-                nodejs
-                yarn
+                # Node- use global installs instead
+                # nodejs
+                # yarn
 
                 python3
                 wget
@@ -160,9 +160,10 @@
                 wabt
 
                 # Docker
-                docker-compose # provides the `docker-compose` command
-                docker-buildx
-                docker-credential-helpers # for `docker-credential-osxkeychain` command
+                # Auth error- use global docker instead
+                # docker-compose # provides the `docker-compose` command
+                # docker-buildx
+                # docker-credential-helpers # for `docker-credential-osxkeychain` command
 
                 foundry-bin
 
