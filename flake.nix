@@ -6,7 +6,7 @@
   inputs.flake-compat.url = "github:edolstra/flake-compat";
   inputs.flake-compat.flake = false;
   inputs.rust-overlay.url = "github:oxalica/rust-overlay";
-  inputs.foundry.url = "github:shazow/foundry.nix/monthly";
+  inputs.foundry.url = "github:shazow/foundry.nix/stable";
   inputs.pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
 
   outputs = { self, flake-utils, nixpkgs, foundry, rust-overlay, pre-commit-hooks, ... }:
@@ -18,9 +18,9 @@
           go = prev."go_1_${toString goVersion}";
           # Overlaying nodejs here to ensure nodePackages use the desired
           # version of nodejs. Offchainlabs suggests nodejs v18 in the docs.
-          # nodejs = prev.nodejs_18;
-          # yarn = (prev.yarn.override { inherit nodejs; });
-          # pnpm = (prev.pnpm.override { inherit nodejs; });
+          nodejs = prev.nodejs_18;
+          yarn = (prev.yarn.override { inherit nodejs; });
+          pnpm = (prev.pnpm.override { inherit nodejs; });
         })
         foundry.overlay
       ];
@@ -149,8 +149,8 @@
                 gotestsum
 
                 # Node- use global installs instead
-                # nodejs
-                # yarn
+                nodejs
+                yarn
 
                 python3
                 wget
