@@ -193,7 +193,14 @@
                 ''
                   export NIX_LDFLAGS="-framework SystemConfiguration $NIX_LDFLAGS"
                 ''
-                + self.checks.${system}.pre-commit-check.shellHook;
+                + self.checks.${system}.pre-commit-check.shellHook + ''
+                  # Add nitro binary to path
+                  export PATH="$PWD/target/bin:$PATH"
+
+                  # Enable tracer
+                  export GETH_VMTRACE=supply
+                  export GETH_VMTRACE_JSONCONFIG='{"path": "/tmp/geth-tracer", "maxSize": 512}'
+                '';
             };
           };
       });
