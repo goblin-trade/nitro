@@ -214,6 +214,7 @@ func GetBlockChain(chainDb ethdb.Database, cacheConfig *core.CacheConfig, chainC
 		EnablePreimageRecording: false,
 	}
 
+	log.Debug("In GetBlockChain, calling core.NewBlockChain")
 	return core.NewBlockChain(chainDb, cacheConfig, chainConfig, nil, nil, engine, vmConfig, shouldPreserveFalse, &txLookupLimit)
 }
 
