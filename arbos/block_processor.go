@@ -5,6 +5,7 @@ package arbos
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -16,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
@@ -311,6 +313,18 @@ func ProduceBlockAdvanced(
 			snap := statedb.Snapshot()
 			statedb.SetTxContext(tx.Hash(), len(receipts)) // the number of successful state transitions
 
+			// Tracer is already attached to statedb. Why is nothing logged then?
+			// We need to pass tracer via vmconfig to core.ApplyTransactionWithResultFilter
+
+			t, err := tracers.LiveDirectory.New("goblin", json.RawMessage("{\"path\": \"/tmp/geth-tracer\"}"))
+			if err == nil {
+				log.Debug("goblin:: tracer obtained in block_processor.go")
+			} else {
+				log.Debug("Custom tracer error: " + err.Error())
+			}
+			// To log 4 state events
+			statedb.SetLogger(t)
+
 			gasPool := gethGas
 			receipt, result, err := core.ApplyTransactionWithResultFilter(
 				chainConfig,
@@ -321,7 +335,9 @@ func ProduceBlockAdvanced(
 				header,
 				tx,
 				&header.GasUsed,
-				vm.Config{},
+				vm.Config{
+					Tracer: t,
+				}, // TODO config with tracer needs to be passed
 				runMode,
 				func(result *core.ExecutionResult) error {
 					return hooks.PostTxFilter(header, statedb, arbState, tx, sender, dataGas, result)
