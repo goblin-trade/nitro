@@ -174,8 +174,7 @@ func ProduceBlockAdvanced(
 	isMsgForPrefetch bool,
 	runMode core.MessageRunMode,
 	tracer *tracing.Hooks,
-) (*types.Block, types.Receipts, error) {
-
+) (outBlock *types.Block, outReceipt types.Receipts, outError error) {
 	arbState, err := arbosState.OpenSystemArbosState(statedb, nil, true)
 	if err != nil {
 		return nil, nil, err
@@ -195,6 +194,21 @@ func ProduceBlockAdvanced(
 
 	header := createNewHeader(lastBlockHeader, l1Info, arbState, chainConfig)
 	signer := types.MakeSigner(chainConfig, header.Number, header.Time)
+
+	if tracer != nil {
+		tracer.OnBlockStart(
+			tracing.BlockEvent{
+				Block:     types.NewBlock(header, &types.Body{Transactions: nil}, nil, trie.NewStackTrie(nil)),
+				TD:        nil,
+				Finalized: nil,
+				Safe:      nil,
+			},
+		)
+
+		// Defer OnBlockEnd() till entire function is executed
+		defer tracer.OnBlockEnd(outError)
+	}
+
 	// Note: blockGasLeft will diverge from the actual gas left during execution in the event of invalid txs,
 	// but it's only used as block-local representation limiting the amount of work done in a block.
 	blockGasLeft, _ := arbState.L2PricingState().PerBlockGasLimit()
