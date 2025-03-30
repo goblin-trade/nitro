@@ -1,6 +1,7 @@
 package gethexec
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -14,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
+	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
@@ -214,18 +216,13 @@ func GetBlockChain(chainDb ethdb.Database, cacheConfig *core.CacheConfig, chainC
 		EnablePreimageRecording: false,
 	}
 
-	// This produces error
-	// 'live blockchain tracer requires genesis alloc to be set'
-	// Yes- we get error even when we don't enable tracer. Error is caused by underscore imports
-	//
-	// Error comes from go-ethereum/core/blockchain.go
-	// t, err := tracers.LiveDirectory.New("goblin", json.RawMessage("{\"path\": \"/tmp/geth-tracer\"}"))
-	// if err == nil {
-	// 	log.Debug("goblin:: tracer created successfully")
-	// 	vmConfig.Tracer = t
-	// } else {
-	// 	log.Debug("Custom tracer error: " + err.Error())
-	// }
+	t, err := tracers.LiveDirectory.New("goblin", json.RawMessage("{\"path\": \"/tmp/geth-tracer\"}"))
+	if err == nil {
+		log.Debug("goblin:: tracer created successfully")
+		vmConfig.Tracer = t
+	} else {
+		log.Debug("Custom tracer error: " + err.Error())
+	}
 
 	log.Debug("In GetBlockChain, calling core.NewBlockChain")
 	return core.NewBlockChain(chainDb, cacheConfig, chainConfig, nil, nil, engine, vmConfig, shouldPreserveFalse, &txLookupLimit)

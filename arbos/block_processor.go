@@ -5,7 +5,6 @@ package arbos
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -15,9 +14,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
@@ -158,7 +157,7 @@ func ProduceBlock(
 
 	hooks := NoopSequencingHooks()
 	return ProduceBlockAdvanced(
-		message.Header, txes, delayedMessagesRead, lastBlockHeader, statedb, chainContext, chainConfig, hooks, isMsgForPrefetch, runMode,
+		message.Header, txes, delayedMessagesRead, lastBlockHeader, statedb, chainContext, chainConfig, hooks, isMsgForPrefetch, runMode, nil,
 	)
 }
 
@@ -174,6 +173,7 @@ func ProduceBlockAdvanced(
 	sequencingHooks *SequencingHooks,
 	isMsgForPrefetch bool,
 	runMode core.MessageRunMode,
+	tracer *tracing.Hooks,
 ) (*types.Block, types.Receipts, error) {
 
 	arbState, err := arbosState.OpenSystemArbosState(statedb, nil, true)
@@ -313,18 +313,6 @@ func ProduceBlockAdvanced(
 			snap := statedb.Snapshot()
 			statedb.SetTxContext(tx.Hash(), len(receipts)) // the number of successful state transitions
 
-			// Tracer is already attached to statedb. Why is nothing logged then?
-			// We need to pass tracer via vmconfig to core.ApplyTransactionWithResultFilter
-
-			t, err := tracers.LiveDirectory.New("goblin", json.RawMessage("{\"path\": \"/tmp/geth-tracer\"}"))
-			if err == nil {
-				log.Debug("goblin:: tracer obtained in block_processor.go")
-			} else {
-				log.Debug("Custom tracer error: " + err.Error())
-			}
-			// To log 4 state events
-			statedb.SetLogger(t)
-
 			gasPool := gethGas
 			receipt, result, err := core.ApplyTransactionWithResultFilter(
 				chainConfig,
@@ -336,8 +324,8 @@ func ProduceBlockAdvanced(
 				tx,
 				&header.GasUsed,
 				vm.Config{
-					Tracer: t,
-				}, // TODO config with tracer needs to be passed
+					Tracer: tracer,
+				},
 				runMode,
 				func(result *core.ExecutionResult) error {
 					return hooks.PostTxFilter(header, statedb, arbState, tx, sender, dataGas, result)
