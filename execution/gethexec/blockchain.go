@@ -221,12 +221,11 @@ func GetBlockChain(chainDb ethdb.Database, cacheConfig *core.CacheConfig, chainC
 	// Yes- we get error even when we don't enable tracer. Error is caused by underscore imports
 	//
 	// Error comes from go-ethereum/core/blockchain.go
-	t, err := tracers.LiveDirectory.New("supply", json.RawMessage("{\"path\": \"/tmp/geth-tracer\", \"maxSize\": 512}"))
+	t, err := tracers.LiveDirectory.New("goblin", json.RawMessage("{\"path\": \"/tmp/geth-tracer\"}"))
 	if err == nil {
-		log.Debug("Custom tracer added")
+		log.Debug("goblin:: tracer created successfully")
 		vmConfig.Tracer = t
 	} else {
-		// TODO fix error 'not found'
 		log.Debug("Custom tracer error: " + err.Error())
 	}
 
