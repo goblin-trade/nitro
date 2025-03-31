@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
@@ -156,7 +157,7 @@ func ProduceBlock(
 
 	hooks := NoopSequencingHooks()
 	return ProduceBlockAdvanced(
-		message.Header, txes, delayedMessagesRead, lastBlockHeader, statedb, chainContext, chainConfig, hooks, isMsgForPrefetch, runMode,
+		message.Header, txes, delayedMessagesRead, lastBlockHeader, statedb, chainContext, chainConfig, hooks, isMsgForPrefetch, runMode, nil,
 	)
 }
 
@@ -172,8 +173,8 @@ func ProduceBlockAdvanced(
 	sequencingHooks *SequencingHooks,
 	isMsgForPrefetch bool,
 	runMode core.MessageRunMode,
-) (*types.Block, types.Receipts, error) {
-
+	tracer *tracing.Hooks,
+) (outBlock *types.Block, outReceipt types.Receipts, outError error) {
 	arbState, err := arbosState.OpenSystemArbosState(statedb, nil, true)
 	if err != nil {
 		return nil, nil, err
@@ -193,6 +194,21 @@ func ProduceBlockAdvanced(
 
 	header := createNewHeader(lastBlockHeader, l1Info, arbState, chainConfig)
 	signer := types.MakeSigner(chainConfig, header.Number, header.Time)
+
+	if tracer != nil {
+		tracer.OnBlockStart(
+			tracing.BlockEvent{
+				Block:     types.NewBlock(header, &types.Body{Transactions: nil}, nil, trie.NewStackTrie(nil)),
+				TD:        nil,
+				Finalized: nil,
+				Safe:      nil,
+			},
+		)
+
+		// Defer OnBlockEnd() till entire function is executed
+		defer tracer.OnBlockEnd(outError)
+	}
+
 	// Note: blockGasLeft will diverge from the actual gas left during execution in the event of invalid txs,
 	// but it's only used as block-local representation limiting the amount of work done in a block.
 	blockGasLeft, _ := arbState.L2PricingState().PerBlockGasLimit()
@@ -321,7 +337,9 @@ func ProduceBlockAdvanced(
 				header,
 				tx,
 				&header.GasUsed,
-				vm.Config{},
+				vm.Config{
+					Tracer: tracer,
+				},
 				runMode,
 				func(result *core.ExecutionResult) error {
 					return hooks.PostTxFilter(header, statedb, arbState, tx, sender, dataGas, result)

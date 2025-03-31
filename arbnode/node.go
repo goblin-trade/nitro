@@ -100,6 +100,7 @@ type Config struct {
 	Maintenance          MaintenanceConfig              `koanf:"maintenance" reload:"hot"`
 	ResourceMgmt         resourcemanager.Config         `koanf:"resource-mgmt" reload:"hot"`
 	BlockMetadataFetcher BlockMetadataFetcherConfig     `koanf:"block-metadata-fetcher" reload:"hot"`
+	VMTrace              arbostypes.VMTraceConfig       `koanf:"vmtrace" reload:"hot"`
 	// SnapSyncConfig is only used for testing purposes, these should not be configured in production.
 	SnapSyncTest SnapSyncConfig
 }
@@ -170,6 +171,7 @@ func ConfigAddOptions(prefix string, f *flag.FlagSet, feedInputEnable bool, feed
 	TransactionStreamerConfigAddOptions(prefix+".transaction-streamer", f)
 	MaintenanceConfigAddOptions(prefix+".maintenance", f)
 	BlockMetadataFetcherConfigAddOptions(prefix+".block-metadata-fetcher", f)
+	VMTraceConfigAddOptions(prefix+".vmtrace", f)
 }
 
 var ConfigDefault = Config{
@@ -191,6 +193,7 @@ var ConfigDefault = Config{
 	ResourceMgmt:         resourcemanager.DefaultConfig,
 	Maintenance:          DefaultMaintenanceConfig,
 	BlockMetadataFetcher: DefaultBlockMetadataFetcherConfig,
+	VMTrace:              DefaultVMTraceConfig,
 	SnapSyncTest:         DefaultSnapSyncConfig,
 }
 
@@ -240,6 +243,21 @@ func ConfigDefaultL2Test() *Config {
 	config.Bold.MinimumGapToParentAssertion = 0
 
 	return &config
+}
+
+var DefaultVMTraceConfig = arbostypes.VMTraceConfig{
+	TracerName: "",
+	JSONConfig: "{}",
+}
+
+var TestVMTraceConfig = arbostypes.VMTraceConfig{
+	TracerName: "",
+	JSONConfig: "{}",
+}
+
+func VMTraceConfigAddOptions(prefix string, f *flag.FlagSet) {
+	f.String(prefix+".tracername", DefaultVMTraceConfig.TracerName, "Name of tracer which should record internal VM operations (costly)")
+	f.String(prefix+".jsonconfig", DefaultVMTraceConfig.JSONConfig, "Tracer configuration (JSON)")
 }
 
 type DangerousConfig struct {
@@ -932,6 +950,7 @@ func (n *Node) Start(ctx context.Context) error {
 			return fmt.Errorf("error initializing exec client: %w", err)
 		}
 	}
+
 	n.SyncMonitor.Initialize(n.InboxReader, n.TxStreamer, n.SeqCoordinator)
 	err := n.Stack.Start()
 	if err != nil {

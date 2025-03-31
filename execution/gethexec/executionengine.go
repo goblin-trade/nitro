@@ -537,6 +537,9 @@ func (s *ExecutionEngine) sequenceTransactionsWithBlockMutex(header *arbostypes.
 	statedb.StartPrefetcher("Sequencer")
 	defer statedb.StopPrefetcher()
 
+	tracer := s.bc.GetVMConfig().Tracer
+	statedb.SetLogger(tracer)
+
 	delayedMessagesRead := lastBlockHeader.Nonce.Uint64()
 
 	startTime := time.Now()
@@ -551,6 +554,7 @@ func (s *ExecutionEngine) sequenceTransactionsWithBlockMutex(header *arbostypes.
 		hooks,
 		false,
 		core.MessageCommitMode,
+		tracer,
 	)
 	if err != nil {
 		return nil, err
