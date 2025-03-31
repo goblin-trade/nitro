@@ -100,7 +100,7 @@ type Config struct {
 	Maintenance          MaintenanceConfig              `koanf:"maintenance" reload:"hot"`
 	ResourceMgmt         resourcemanager.Config         `koanf:"resource-mgmt" reload:"hot"`
 	BlockMetadataFetcher BlockMetadataFetcherConfig     `koanf:"block-metadata-fetcher" reload:"hot"`
-	VMTrace              VMTraceConfig                  `koanf:"vmtrace" reload:"hot"`
+	VMTrace              arbostypes.VMTraceConfig       `koanf:"vmtrace" reload:"hot"`
 	// SnapSyncConfig is only used for testing purposes, these should not be configured in production.
 	SnapSyncTest SnapSyncConfig
 }
@@ -245,17 +245,12 @@ func ConfigDefaultL2Test() *Config {
 	return &config
 }
 
-type VMTraceConfig struct {
-	TracerName string `koanf:"tracername"`
-	JSONConfig string `koanf:"jsonconfig"`
-}
-
-var DefaultVMTraceConfig = VMTraceConfig{
+var DefaultVMTraceConfig = arbostypes.VMTraceConfig{
 	TracerName: "",
 	JSONConfig: "{}",
 }
 
-var TestVMTraceConfig = VMTraceConfig{
+var TestVMTraceConfig = arbostypes.VMTraceConfig{
 	TracerName: "",
 	JSONConfig: "{}",
 }
@@ -459,12 +454,6 @@ func createNodeImpl(
 	blobReader daprovider.BlobReader,
 ) (*Node, error) {
 	config := configFetcher.Get()
-
-	// Read config like this
-
-	log.Debug("LiveTracerName " + config.VMTrace.TracerName)
-	log.Debug("JSONConfig " + config.VMTrace.JSONConfig)
-
 	err := checkArbDbSchemaVersion(arbDb)
 	if err != nil {
 		return nil, err
@@ -960,6 +949,9 @@ func (n *Node) Start(ctx context.Context) error {
 			return fmt.Errorf("error initializing exec client: %w", err)
 		}
 	}
+
+	// execClient.ConfigFetcher
+
 	n.SyncMonitor.Initialize(n.InboxReader, n.TxStreamer, n.SeqCoordinator)
 	err := n.Stack.Start()
 	if err != nil {

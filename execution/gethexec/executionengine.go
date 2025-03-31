@@ -537,15 +537,7 @@ func (s *ExecutionEngine) sequenceTransactionsWithBlockMutex(header *arbostypes.
 	statedb.StartPrefetcher("Sequencer")
 	defer statedb.StopPrefetcher()
 
-	// Verified- this is getting extracted correctly
 	tracer := s.bc.GetVMConfig().Tracer
-
-	if tracer == nil {
-		log.Debug("goblin:: tracer in executionengine.go is nil")
-	} else {
-		log.Debug("goblin:: tracer in executionengine.go extracted successfully")
-	}
-	// This is called multiple times. We should only set logger once
 	statedb.SetLogger(tracer)
 
 	delayedMessagesRead := lastBlockHeader.Nonce.Uint64()

@@ -207,7 +207,13 @@ func WriteOrTestChainConfig(chainDb ethdb.Database, config *params.ChainConfig) 
 	return nil
 }
 
-func GetBlockChain(chainDb ethdb.Database, cacheConfig *core.CacheConfig, chainConfig *params.ChainConfig, txLookupLimit uint64) (*core.BlockChain, error) {
+func GetBlockChain(
+	chainDb ethdb.Database,
+	cacheConfig *core.CacheConfig,
+	chainConfig *params.ChainConfig,
+	vmTraceConfig *arbostypes.VMTraceConfig,
+	txLookupLimit uint64,
+) (*core.BlockChain, error) {
 	engine := arbos.Engine{
 		IsSequencer: true,
 	}
@@ -216,25 +222,35 @@ func GetBlockChain(chainDb ethdb.Database, cacheConfig *core.CacheConfig, chainC
 		EnablePreimageRecording: false,
 	}
 
-	t, err := tracers.LiveDirectory.New("goblin", json.RawMessage("{\"path\": \"/tmp/geth-tracer\"}"))
-	if err == nil {
-		log.Debug("goblin:: tracer created successfully")
-		vmConfig.Tracer = t
-	} else {
-		log.Debug("Custom tracer error: " + err.Error())
+	if vmTraceConfig != nil && vmTraceConfig.TracerName != "" {
+		t, err := tracers.LiveDirectory.New(vmTraceConfig.TracerName, json.RawMessage(vmTraceConfig.JSONConfig))
+		if err == nil {
+			log.Info(vmTraceConfig.TracerName + " live tracer activated")
+			vmConfig.Tracer = t
+		} else {
+			log.Error("Custom tracer error: " + err.Error())
+		}
 	}
 
-	log.Debug("In GetBlockChain, calling core.NewBlockChain")
 	return core.NewBlockChain(chainDb, cacheConfig, chainConfig, nil, nil, engine, vmConfig, shouldPreserveFalse, &txLookupLimit)
 }
 
-func WriteOrTestBlockChain(chainDb ethdb.Database, cacheConfig *core.CacheConfig, initData statetransfer.InitDataReader, chainConfig *params.ChainConfig, initMessage *arbostypes.ParsedInitMessage, txLookupLimit uint64, accountsPerSync uint) (*core.BlockChain, error) {
+func WriteOrTestBlockChain(
+	chainDb ethdb.Database,
+	cacheConfig *core.CacheConfig,
+	initData statetransfer.InitDataReader,
+	chainConfig *params.ChainConfig,
+	vmTraceConfig *arbostypes.VMTraceConfig,
+	initMessage *arbostypes.ParsedInitMessage,
+	txLookupLimit uint64,
+	accountsPerSync uint,
+) (*core.BlockChain, error) {
 	emptyBlockChain := rawdb.ReadHeadHeader(chainDb) == nil
 	if !emptyBlockChain && (cacheConfig.StateScheme == rawdb.PathScheme) {
 		// When using path scheme, and the stored state trie is not empty,
 		// WriteOrTestGenBlock is not able to recover EmptyRootHash state trie node.
 		// In that case Nitro doesn't test genblock, but just returns the BlockChain.
-		return GetBlockChain(chainDb, cacheConfig, chainConfig, txLookupLimit)
+		return GetBlockChain(chainDb, cacheConfig, chainConfig, vmTraceConfig, txLookupLimit)
 	}
 
 	err := WriteOrTestGenblock(chainDb, cacheConfig, initData, chainConfig, initMessage, accountsPerSync)
@@ -245,7 +261,7 @@ func WriteOrTestBlockChain(chainDb ethdb.Database, cacheConfig *core.CacheConfig
 	if err != nil {
 		return nil, err
 	}
-	return GetBlockChain(chainDb, cacheConfig, chainConfig, txLookupLimit)
+	return GetBlockChain(chainDb, cacheConfig, chainConfig, vmTraceConfig, txLookupLimit)
 }
 
 // Don't preserve reorg'd out blocks
