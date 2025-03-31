@@ -100,6 +100,7 @@ type Config struct {
 	Maintenance          MaintenanceConfig              `koanf:"maintenance" reload:"hot"`
 	ResourceMgmt         resourcemanager.Config         `koanf:"resource-mgmt" reload:"hot"`
 	BlockMetadataFetcher BlockMetadataFetcherConfig     `koanf:"block-metadata-fetcher" reload:"hot"`
+	VMTrace              VMTraceConfig                  `koanf:"vmtrace" reload:"hot"`
 	// SnapSyncConfig is only used for testing purposes, these should not be configured in production.
 	SnapSyncTest SnapSyncConfig
 }
@@ -170,6 +171,7 @@ func ConfigAddOptions(prefix string, f *flag.FlagSet, feedInputEnable bool, feed
 	TransactionStreamerConfigAddOptions(prefix+".transaction-streamer", f)
 	MaintenanceConfigAddOptions(prefix+".maintenance", f)
 	BlockMetadataFetcherConfigAddOptions(prefix+".block-metadata-fetcher", f)
+	VMTraceConfigAddOptions(prefix+".vmtrace", f)
 }
 
 var ConfigDefault = Config{
@@ -191,6 +193,7 @@ var ConfigDefault = Config{
 	ResourceMgmt:         resourcemanager.DefaultConfig,
 	Maintenance:          DefaultMaintenanceConfig,
 	BlockMetadataFetcher: DefaultBlockMetadataFetcherConfig,
+	VMTrace:              DefaultVMTraceConfig,
 	SnapSyncTest:         DefaultSnapSyncConfig,
 }
 
@@ -240,6 +243,26 @@ func ConfigDefaultL2Test() *Config {
 	config.Bold.MinimumGapToParentAssertion = 0
 
 	return &config
+}
+
+type VMTraceConfig struct {
+	TracerName string `koanf:"tracername"`
+	JSONConfig string `koanf:"jsonconfig"`
+}
+
+var DefaultVMTraceConfig = VMTraceConfig{
+	TracerName: "",
+	JSONConfig: "{}",
+}
+
+var TestVMTraceConfig = VMTraceConfig{
+	TracerName: "",
+	JSONConfig: "{}",
+}
+
+func VMTraceConfigAddOptions(prefix string, f *flag.FlagSet) {
+	f.String(prefix+".tracername", DefaultVMTraceConfig.TracerName, "Name of tracer which should record internal VM operations (costly)")
+	f.String(prefix+".jsonconfig", DefaultVMTraceConfig.JSONConfig, "Tracer configuration (JSON)")
 }
 
 type DangerousConfig struct {
@@ -436,6 +459,11 @@ func createNodeImpl(
 	blobReader daprovider.BlobReader,
 ) (*Node, error) {
 	config := configFetcher.Get()
+
+	// Read config like this
+
+	log.Debug("LiveTracerName " + config.VMTrace.TracerName)
+	log.Debug("JSONConfig " + config.VMTrace.JSONConfig)
 
 	err := checkArbDbSchemaVersion(arbDb)
 	if err != nil {
